@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: validation-webhook
+  namespace: k8s-admctl
+  labels:
+    app: validate
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: validate
+  strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: validate
+    spec:
+      containers:
+      - name: webhook
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+        image: ttl.sh/<YOUR UNIQUE ID>:2h
+        imagePullPolicy: Always
+        resources:
+          limits:
+            cpu: "1"
+            memory: "500Mi"
+          requests:
+            cpu: "0.1"
+            memory: "100Mi"
+        readinessProbe:
+          initialDelaySeconds: 15
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - "pidof -x gunicorn"
+        livenessProbe:
+          initialDelaySeconds: 30
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - "pidof -x gunicorn"
+        ports:
+        - containerPort: 8443
+        volumeMounts:
+        - name: certs-volume
+          readOnly: true
+          mountPath: "/certs"
+        - name: "tmp"
+          mountPath: "/tmp"
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 11000
+        runAsGroup: 11000
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+      - name: certs-volume
+        secret:
+          secretName: admission-tls
+      - emptyDir: {}
+        name: tmp

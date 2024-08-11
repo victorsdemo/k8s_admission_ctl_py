@@ -1,0 +1,1 @@
+openssl req -x509 -sha256 -newkey rsa:2048 -keyout webhook.key -out webhook.crt -days 1024 -nodes -extensions SAN -config <(cat k8s-admctl.cnf <(printf "[SAN]\nsubjectAltName=DNS.1:validate.k8s-admctl.svc"))
